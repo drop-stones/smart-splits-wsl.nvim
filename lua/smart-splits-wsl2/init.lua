@@ -4,7 +4,12 @@ local smart_splits = require("smart-splits-wsl2.smart_splits")
 
 local M = {}
 
-function M.setup() end
+---Performs heavy initialization tasks asynchronously at setup to avoid runtime delays.
+function M.setup()
+  vim.schedule(function()
+    local _ = require("smart-splits-wsl2.mux")
+  end)
+end
 
 -- Dynamically assign move and resize functions for each direction.
 for _, direction in pairs(smart_splits.Direction) do
