@@ -1,6 +1,10 @@
 -- WSL2 Zellij adapter implementing the SmartSplitsMultiplexer interface.
 -- This allows smart-splits.nvim to control Zellij running in WSL2
 -- from a Windows nvim.exe.
+--
+-- Performance: each wsl.exe call has ~100-200ms overhead. This adapter
+-- minimizes calls by batching shell commands and using a synthetic pane
+-- ID counter instead of querying zellij for real pane IDs.
 
 local wsl2 = require("smart-splits-wsl2.wsl2")
 local lazy = require("smart-splits.lazy")
@@ -11,15 +15,19 @@ local Direction = require("smart-splits.types").Direction
 ---@type string?
 local zellij_path = nil
 
----Execute a zellij command in WSL2, resolving the binary path on first use.
----@param cmd string[]
----@return string output, number exit_code
-local function zellij_exec(cmd)
+---Ensure zellij_path is resolved, resolving it on first use.
+local function ensure_zellij_path()
   if not zellij_path then
     zellij_path = wsl2.resolve_cmd_in_wsl2("zellij")
   end
   assert(zellij_path, "zellij binary not found in WSL2")
+end
 
+---Execute a zellij command in WSL2.
+---@param cmd string[]
+---@return string output, number exit_code
+local function zellij_exec(cmd)
+  ensure_zellij_path()
   local command = vim.deepcopy(cmd)
   table.insert(command, 1, zellij_path)
   local result = wsl2.execute_in_wsl2(command)
@@ -30,12 +38,12 @@ local function zellij_exec(cmd)
   end
 end
 
-local directions_reverse = {
-  [Direction.left] = Direction.right,
-  [Direction.right] = Direction.left,
-  [Direction.up] = Direction.down,
-  [Direction.down] = Direction.up,
-}
+---Synthetic pane ID counter. Incremented when next_pane detects actual movement.
+---The upstream only compares current_pane_id() before and after next_pane()
+---to detect whether movement occurred, so a monotonic counter works correctly
+---without ever querying zellij for real pane identifiers.
+---@type integer
+local pane_generation = 0
 
 ---@type SmartSplitsMultiplexer
 local M = {} ---@diagnostic disable-line: missing-fields
@@ -43,31 +51,14 @@ local M = {} ---@diagnostic disable-line: missing-fields
 M.type = "zellij"
 
 function M.current_pane_id()
-  local output_raw, code = zellij_exec({ "action", "list-clients" })
-  if code ~= 0 then
-    return nil
-  end
-  local output = vim.split(output_raw, "\n", { trimempty = true })
-  if not output[2] then
-    return nil
-  end
-  local pane_id = string.match(output[2], "%S+%s+%w+_(%d+)")
-  return pane_id
+  return pane_generation
 end
 
-function M.current_pane_at_edge(direction)
-  local pane_id = M.current_pane_id()
-  if pane_id == nil then
-    return false
-  end
-  zellij_exec({ "action", "move-focus", direction })
-  local new_pane_id = M.current_pane_id()
-  if new_pane_id == nil then
-    return false
-  end
-  -- move back to original pane
-  zellij_exec({ "action", "move-focus", directions_reverse[direction] })
-  return pane_id == new_pane_id
+function M.current_pane_at_edge(_direction) ---@diagnostic disable-line: unused-local
+  -- Always return false to skip expensive edge detection.
+  -- The upstream move logic handles the "didn't actually move" case via
+  -- pane ID comparison in move_multiplexer_inner.
+  return false
 end
 
 function M.is_in_session()
@@ -82,12 +73,34 @@ function M.next_pane(direction)
   if not M.is_in_session() then
     return false
   end
+  ensure_zellij_path()
+
   local action = "move-focus"
   if config.zellij_move_focus_or_tab and (direction == Direction.left or direction == Direction.right) then
     action = "move-focus-or-tab"
   end
-  local _, code = zellij_exec({ "action", action, direction })
-  return code == 0
+
+  -- Batch: snapshot → move → snapshot → compare, all in 1 wsl.exe call.
+  -- Uses full zellij path so plain sh (no login shell) suffices.
+  local safe_path = vim.fn.shellescape(zellij_path)
+  local script = string.format(
+    "BEFORE=$(%s action list-clients 2>/dev/null); "
+      .. "%s action %s %s 2>/dev/null; "
+      .. "AFTER=$(%s action list-clients 2>/dev/null); "
+      .. '[ "$BEFORE" != "$AFTER" ] && echo MOVED || echo SAME',
+    safe_path,
+    safe_path,
+    action,
+    direction,
+    safe_path
+  )
+  local result = wsl2.execute_in_wsl2({ "sh", "-c", script })
+
+  if vim.trim(result.stdout or "") == "MOVED" then
+    pane_generation = pane_generation + 1
+  end
+
+  return true
 end
 
 -- amount is not supported on zellij
