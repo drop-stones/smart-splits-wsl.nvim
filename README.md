@@ -26,15 +26,13 @@ nvim.exe (Windows) → smart-splits.nvim → smart-splits-wsl adapter → wsl.ex
 
 ### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
-Define keybindings on smart-splits-wsl so that it loads and injects the adapter before smart-splits handles the keypress:
+Add smart-splits-wsl as a dependency of smart-splits.nvim. The `opts = {}` triggers `setup()`, which injects the WSL2 adapter before any keybinding fires:
 
 ```lua
 {
   "mrjones2014/smart-splits.nvim",
-},
-{
-  "drop-stones/smart-splits-wsl.nvim",
-  opts = {},
+  dependencies = { { "drop-stones/smart-splits-wsl.nvim", opts = {} } },
+  -- stylua: ignore
   keys = {
     -- moving between splits
     { "<C-h>", function() require("smart-splits").move_cursor_left()  end, mode = { "n", "t" }, desc = "Move to Left Window" },
