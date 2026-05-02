@@ -52,33 +52,23 @@ INSTALLATION             *smart-splits-wsl.nvim-smart-splits-wsl-installation*
 
 LAZY.NVIM ~
 
-Add smart-splits-wsl as a dependency of smart-splits.nvim. The `opts = {}`
-triggers `setup()`, which injects the WSL2 adapter before any keybinding fires:
+Add smart-splits-wsl as a dependency of your existing smart-splits.nvim spec.
+The `opts = {}` triggers `setup()`, which injects the WSL2 adapter before any
+keybinding fires:
 
 >lua
     {
       "mrjones2014/smart-splits.nvim",
       dependencies = { { "drop-stones/smart-splits-wsl.nvim", opts = {} } },
-      -- stylua: ignore
-      keys = {
-        -- moving between splits
-        { "<C-h>", function() require("smart-splits").move_cursor_left()  end, mode = { "n", "t" }, desc = "Move to Left Window" },
-        { "<C-j>", function() require("smart-splits").move_cursor_down()  end, mode = { "n", "t" }, desc = "Move to Lower Window" },
-        { "<C-k>", function() require("smart-splits").move_cursor_up()    end, mode = { "n", "t" }, desc = "Move to Upper Window" },
-        { "<C-l>", function() require("smart-splits").move_cursor_right() end, mode = { "n", "t" }, desc = "Move to Right Window" },
-        -- resizing splits
-        { "<C-Left>",  function() require("smart-splits").resize_left()  end, mode = { "n", "t" }, desc = "Resize Window Left" },
-        { "<C-Right>", function() require("smart-splits").resize_right() end, mode = { "n", "t" }, desc = "Resize Window Right" },
-        { "<C-Up>",    function() require("smart-splits").resize_up()    end, mode = { "n", "t" }, desc = "Resize Window Up" },
-        { "<C-Down>",  function() require("smart-splits").resize_down()  end, mode = { "n", "t" }, desc = "Resize Window Down" },
-      },
+      -- Configure keys, opts, etc. as you normally would for smart-splits.nvim.
     }
 <
 
 
-  [!IMPORTANT] Keybindings call `require("smart-splits")` directly — not
-  `require("smart-splits-wsl")`. This plugin only needs `setup()` to run
-  (triggered by `opts = {}`); after that, smart-splits.nvim handles everything.
+  [!IMPORTANT] This plugin only needs `setup()` to run (triggered by `opts =
+  {}`); after that, smart-splits.nvim handles everything. Use
+  `require("smart-splits")` for all keybindings and API calls — not
+  `require("smart-splits-wsl")`.
 
 WSL2 ENVIRONMENT SETUP*smart-splits-wsl.nvim-smart-splits-wsl-wsl2-environment-setup*
 
