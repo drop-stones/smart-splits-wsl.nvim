@@ -1,143 +1,104 @@
-# smart-splits-wsl2
+# smart-splits-wsl
 
-Bridge Windows Neovim (nvim.exe) with a multiplexer inside WSL2 for [smart-splits.nvim](https://github.com/mrjones2014/smart-splits.nvim).  
-This plugin is a lightweight wrapper: when a multiplexer is available it forwards window navigation/resize through it; when not, it safely falls back to normal smart-splits behavior.
+WSL2 multiplexer adapter for [smart-splits.nvim](https://github.com/mrjones2014/smart-splits.nvim).
 
-## ✨ Features
+This plugin injects a WSL2-aware multiplexer backend into smart-splits.nvim, enabling seamless pane navigation and resizing between Windows Neovim (nvim.exe) and a multiplexer running inside WSL2.
 
-- Connects Windows Neovim (nvim.exe) to a WSL2 multiplexer for pane-aware navigation and resizing
-- Safe fallback when the environment or multiplexer is not available
+## How it works
+
+smart-splits.nvim has a pluggable multiplexer backend system. This plugin implements that interface and injects it at setup time, so all upstream logic, settings, and keybindings work transparently — no wrapper API or separate keybindings required.
+
+```
+nvim.exe (Windows) → smart-splits.nvim → smart-splits-wsl adapter → wsl.exe --exec → zellij (WSL2)
+```
 
 > [!NOTE]
-> 🧭 Target scenario (non-blocking)
->
-> This plugin bridges Windows Neovim (nvim.exe) launched from WSL2 to a multiplexer inside WSL2.  
-> Outside that scenario it safely falls back to normal smart-splits behavior, so you can keep it installed everywhere without harm.
+> This plugin only activates when Windows Neovim is launched from WSL2 with a supported multiplexer.
+> Outside that scenario, smart-splits.nvim behaves normally.
 
-## ⚡️ Requirements
+## Requirements
 
 - Neovim >= **0.10.0**
-- A terminal multiplexer running inside WSL2
 - [smart-splits.nvim](https://github.com/mrjones2014/smart-splits.nvim)
+- A terminal multiplexer running inside WSL2 (currently [Zellij](https://github.com/zellij-org/zellij))
 
-## 📦 Installation
-
-Install the plugin with your preferred package manager.
+## Installation
 
 ### [lazy.nvim](https://github.com/folke/lazy.nvim)
+
+Define keybindings on smart-splits-wsl so that it loads and injects the adapter before smart-splits handles the keypress:
 
 ```lua
 {
   "mrjones2014/smart-splits.nvim",
-  opts = { ... },
-  keys = { ... },
 },
 {
-  "drop-stones/smart-splits-wsl2.nvim",
-  event = "VeryLazy",
-  opts = {},
-  keys = { ... },
-}
-```
-
-## 🚀 Usage
-
-If you are using the Windows build of Neovim launched from WSL2, the following functions will route through the multiplexer; otherwise they behave like upstream smart-splits.
-
-### Lua API
-
-```lua
--- moving between splits (same as smart-splits.nvim)
-require("smart-splits-wsl2").move_cursor_up()
-require("smart-splits-wsl2").move_cursor_down()
-require("smart-splits-wsl2").move_cursor_left()
-require("smart-splits-wsl2").move_cursor_right()
-
--- resizing splits (same as smart-splits.nvim)
-require("smart-splits-wsl2").resize_up(amount)
-require("smart-splits-wsl2").resize_down(amount)
-require("smart-splits-wsl2").resize_left(amount)
-require("smart-splits-wsl2").resize_right(amount)
-```
-
-### ⌨️ Key Mappings Example
-
-```lua
-{
-  "drop-stones/smart-splits-wsl2.nvim",
-  event = "VeryLazy",
+  "drop-stones/smart-splits-wsl.nvim",
   opts = {},
   keys = {
     -- moving between splits
-    { "<c-h>", function() require("smart-splits-wsl2").move_cursor_left()  end, mode = { "n", "t" }, desc = "Go to Left Window" },
-    { "<c-j>", function() require("smart-splits-wsl2").move_cursor_down()  end, mode = { "n", "t" }, desc = "Go to Lower Window" },
-    { "<c-k>", function() require("smart-splits-wsl2").move_cursor_up()    end, mode = { "n", "t" }, desc = "Go to Upper Window" },
-    { "<c-l>", function() require("smart-splits-wsl2").move_cursor_right() end, mode = { "n", "t" }, desc = "Go to Right Window" },
-
+    { "<C-h>", function() require("smart-splits").move_cursor_left()  end, mode = { "n", "t" }, desc = "Move to Left Window" },
+    { "<C-j>", function() require("smart-splits").move_cursor_down()  end, mode = { "n", "t" }, desc = "Move to Lower Window" },
+    { "<C-k>", function() require("smart-splits").move_cursor_up()    end, mode = { "n", "t" }, desc = "Move to Upper Window" },
+    { "<C-l>", function() require("smart-splits").move_cursor_right() end, mode = { "n", "t" }, desc = "Move to Right Window" },
     -- resizing splits
-    { "<c-left>",  function() require("smart-splits-wsl2").resize_left()  end, mode = { "n", "t" }, desc = "Resize Window Left" },
-    { "<c-right>", function() require("smart-splits-wsl2").resize_right() end, mode = { "n", "t" }, desc = "Resize Window Right" },
-    { "<c-up>",    function() require("smart-splits-wsl2").resize_up()    end, mode = { "n", "t" }, desc = "Resize Window Up" },
-    { "<c-down>",  function() require("smart-splits-wsl2").resize_down()  end, mode = { "n", "t" }, desc = "Resize Window Down" },
+    { "<C-Left>",  function() require("smart-splits").resize_left()  end, mode = { "n", "t" }, desc = "Resize Window Left" },
+    { "<C-Right>", function() require("smart-splits").resize_right() end, mode = { "n", "t" }, desc = "Resize Window Right" },
+    { "<C-Up>",    function() require("smart-splits").resize_up()    end, mode = { "n", "t" }, desc = "Resize Window Up" },
+    { "<C-Down>",  function() require("smart-splits").resize_down()  end, mode = { "n", "t" }, desc = "Resize Window Down" },
   },
 }
 ```
 
-## 🔌 Multiplexer Integration
+> [!IMPORTANT]
+> Keybindings call `require("smart-splits")` directly — not `require("smart-splits-wsl")`.
+> This plugin only needs `setup()` to run (triggered by `opts = {}`); after that, smart-splits.nvim handles everything.
 
-To make multiplexer/session details visible to nvim.exe on Windows, propagate environment variables from WSL2 using `WSLENV`.  
-Append to `WSLENV` in your WSL shell profile (e.g. `~/.bashrc`, `~/.zshrc`) so it persists.
+## WSL2 Environment Setup
 
-### 🧱 Baseline environment (all users)
+To make multiplexer and session details visible to nvim.exe on Windows, propagate environment variables from WSL2 using `WSLENV`.
+Add the following to your WSL2 shell profile (e.g. `~/.bashrc`, `~/.zshrc`, `~/.config/fish/config.fish`):
 
-`WSL_DISTRO_NAME` is usually set automatically by WSL2. Ensure it is propagated to Windows processes:
+### Baseline (all users)
+
+`WSL_DISTRO_NAME` is set automatically by WSL2. Ensure it is propagated to Windows processes:
 
 ```bash
-# in WSL shell
 export WSLENV=$WSLENV:WSL_DISTRO_NAME/w
 ```
 
 > [!TIP]
-> Verify inside Windows Neovim:
->
-> ```vim
-> :echo $WSL_DISTRO_NAME
-> ```
+> Verify inside Windows Neovim: `:echo $WSL_DISTRO_NAME`
 
-### 🧩 Multiplexer-specific setup
+### Zellij
 
-#### Zellij
-
-If you use [Zellij](https://github.com/zellij-org/zellij), ensure that `ZELLIJ` and `ZELLIJ_SESSION_NAME` are visible to nvim.exe.
-
-Propagate them via `WSLENV`:
+Propagate `ZELLIJ` and `ZELLIJ_SESSION_NAME`:
 
 ```bash
-# in WSL shell
 export WSLENV=$WSLENV:ZELLIJ/w:ZELLIJ_SESSION_NAME/w
 ```
 
 > [!NOTE]
-> These variables are set by Zellij when Neovim is launched from inside a Zellij session.  
-> The `/w` flag ensures the variables are exported to Windows processes started from WSL (such as nvim.exe).
+> These variables are set by Zellij when Neovim is launched from inside a Zellij session.
+> The `/w` flag ensures the variables are exported to Windows processes started from WSL.
 
 > [!TIP]
-> Verify inside Windows Neovim:
->
-> ```vim
-> :echo $ZELLIJ
-> :echo $ZELLIJ_SESSION_NAME
-> ```
+> Verify inside Windows Neovim: `:echo $ZELLIJ` and `:echo $ZELLIJ_SESSION_NAME`
 
-### 🔧 Other Multiplexers
+## Supported Multiplexers
 
-The currently implemented adapter targets Zellij. The code is structured to allow additional multiplexers.  
-Contributions are welcome. See `lua/smart-splits-wsl2/mux/zellij.lua` as a reference implementation.
+| Multiplexer | Status |
+|-------------|--------|
+| [Zellij](https://github.com/zellij-org/zellij) | Supported |
+| tmux | Not yet |
+| WezTerm | Not yet |
 
-## 🩺 Troubleshooting
+Contributions for additional multiplexers are welcome. See `lua/smart-splits-wsl/mux/zellij.lua` as a reference.
 
-Run `:checkhealth smart-splits-wsl2` if you run into any issues.
+## Troubleshooting
 
-## 📜 License
+Run `:checkhealth smart-splits-wsl` to diagnose issues.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
