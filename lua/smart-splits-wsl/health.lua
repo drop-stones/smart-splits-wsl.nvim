@@ -1,5 +1,5 @@
-local platform = require("smart-splits-wsl2.os")
-local wsl2 = require("smart-splits-wsl2.wsl2")
+local platform = require("smart-splits-wsl.os")
+local wsl2 = require("smart-splits-wsl.wsl2")
 
 local REQUIRED_NVIM_VERSION = { 0, 10, 0 }
 
@@ -27,7 +27,7 @@ end
 ---Environment and adapter checks.
 local function check_environment()
   if not platform.is_windows() then
-    vim.health.info("OS is not Windows; smart-splits-wsl2 is disabled in this environment.")
+    vim.health.info("OS is not Windows; smart-splits-wsl is disabled in this environment.")
     return
   end
 
@@ -74,7 +74,7 @@ end
 
 return {
   check = function()
-    vim.health.start("smart-splits-wsl2.nvim")
+    vim.health.start("smart-splits-wsl.nvim")
     check_nvim_version()
     check_smart_splits()
     check_environment()

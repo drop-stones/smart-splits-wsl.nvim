@@ -1,6 +1,6 @@
 -- WSL2 helpers
 
-local platform = require("smart-splits-wsl2.os")
+local platform = require("smart-splits-wsl.os")
 
 local M = {}
 

@@ -1,4 +1,4 @@
-# smart-splits-wsl2
+# smart-splits-wsl
 
 WSL2 multiplexer adapter for [smart-splits.nvim](https://github.com/mrjones2014/smart-splits.nvim).
 
@@ -9,7 +9,7 @@ This plugin injects a WSL2-aware multiplexer backend into smart-splits.nvim, ena
 smart-splits.nvim has a pluggable multiplexer backend system. This plugin implements that interface and injects it at setup time, so all upstream logic, settings, and keybindings work transparently — no wrapper API or separate keybindings required.
 
 ```
-nvim.exe (Windows) → smart-splits.nvim → smart-splits-wsl2 adapter → wsl.exe --exec → zellij (WSL2)
+nvim.exe (Windows) → smart-splits.nvim → smart-splits-wsl adapter → wsl.exe --exec → zellij (WSL2)
 ```
 
 > [!NOTE]
@@ -26,14 +26,14 @@ nvim.exe (Windows) → smart-splits.nvim → smart-splits-wsl2 adapter → wsl.e
 
 ### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
-Define keybindings on smart-splits-wsl2 so that it loads and injects the adapter before smart-splits handles the keypress:
+Define keybindings on smart-splits-wsl so that it loads and injects the adapter before smart-splits handles the keypress:
 
 ```lua
 {
   "mrjones2014/smart-splits.nvim",
 },
 {
-  "drop-stones/smart-splits-wsl2.nvim",
+  "drop-stones/smart-splits-wsl.nvim",
   opts = {},
   keys = {
     -- moving between splits
@@ -51,7 +51,7 @@ Define keybindings on smart-splits-wsl2 so that it loads and injects the adapter
 ```
 
 > [!IMPORTANT]
-> Keybindings call `require("smart-splits")` directly — not `require("smart-splits-wsl2")`.
+> Keybindings call `require("smart-splits")` directly — not `require("smart-splits-wsl")`.
 > This plugin only needs `setup()` to run (triggered by `opts = {}`); after that, smart-splits.nvim handles everything.
 
 ## WSL2 Environment Setup
@@ -93,11 +93,11 @@ export WSLENV=$WSLENV:ZELLIJ/w:ZELLIJ_SESSION_NAME/w
 | tmux | Not yet |
 | WezTerm | Not yet |
 
-Contributions for additional multiplexers are welcome. See `lua/smart-splits-wsl2/mux/zellij.lua` as a reference.
+Contributions for additional multiplexers are welcome. See `lua/smart-splits-wsl/mux/zellij.lua` as a reference.
 
 ## Troubleshooting
 
-Run `:checkhealth smart-splits-wsl2` to diagnose issues.
+Run `:checkhealth smart-splits-wsl` to diagnose issues.
 
 ## License
 

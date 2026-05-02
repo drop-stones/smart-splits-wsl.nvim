@@ -6,7 +6,7 @@
 -- minimizes calls by batching shell commands and using a synthetic pane
 -- ID counter instead of querying zellij for real pane IDs.
 
-local wsl2 = require("smart-splits-wsl2.wsl2")
+local wsl2 = require("smart-splits-wsl.wsl2")
 local lazy = require("smart-splits.lazy")
 local config = lazy.require_on_index("smart-splits.config")
 local Direction = require("smart-splits.types").Direction

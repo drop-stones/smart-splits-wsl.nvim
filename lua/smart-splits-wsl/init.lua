@@ -1,10 +1,10 @@
--- Main entry point for smart-splits-wsl2 plugin.
+-- Main entry point for smart-splits-wsl plugin.
 -- Detects the WSL2 + multiplexer environment and injects a mux adapter
 -- into smart-splits.nvim so that all upstream logic and settings apply.
 
 local M = {}
 
----Set up smart-splits-wsl2.
+---Set up smart-splits-wsl.
 ---Detects the environment and, if applicable,
 ---injects the WSL2 mux adapter into smart-splits.nvim.
 ---
@@ -12,7 +12,7 @@ local M = {}
 ---Declare smart-splits.nvim as a dependency so it loads first,
 ---then call this setup() synchronously.
 function M.setup()
-  local platform = require("smart-splits-wsl2.os")
+  local platform = require("smart-splits-wsl.os")
 
   -- Only activate on Windows nvim.exe launched from WSL2 with Zellij.
   if
@@ -27,7 +27,7 @@ function M.setup()
   -- Inject the WSL2 Zellij adapter into smart-splits.nvim.
   -- The zellij binary path is resolved lazily on first use,
   -- so this injection is lightweight (no wsl.exe call here).
-  local adapter = require("smart-splits-wsl2.mux.zellij")
+  local adapter = require("smart-splits-wsl.mux.zellij")
   require("smart-splits.mux").__mux = adapter
 end
 
