@@ -13,14 +13,14 @@ local M = {}
 ---then call this setup() synchronously.
 function M.setup()
   local platform = require("smart-splits-wsl2.os")
-  local wsl2 = require("smart-splits-wsl2.wsl2")
 
-  if not platform.is_windows() or not wsl2.invoked_from_wsl2() then
-    return
-  end
-
-  -- Currently only Zellij is supported
-  if not vim.env.ZELLIJ or not vim.env.ZELLIJ_SESSION_NAME then
+  -- Only activate on Windows nvim.exe launched from WSL2 with Zellij.
+  if
+    not platform.is_windows()
+    or not vim.env.WSL_DISTRO_NAME
+    or not vim.env.ZELLIJ
+    or not vim.env.ZELLIJ_SESSION_NAME
+  then
     return
   end
 

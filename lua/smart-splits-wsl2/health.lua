@@ -31,26 +31,23 @@ local function check_environment()
     return
   end
 
-  if not wsl2.invoked_from_wsl2() then
-    vim.health.info("Neovim (nvim.exe) was not launched from WSL2; smart-splits-wsl2 is disabled.")
-    return
-  end
-
+  -- WSL_DISTRO_NAME (required)
   local distro = vim.env.WSL_DISTRO_NAME
   if distro and #distro > 0 then
     vim.health.ok("WSL_DISTRO_NAME is set: " .. distro)
   else
-    vim.health.info("WSL_DISTRO_NAME is not set; if your environment sanitizes variables, consider exporting it.")
+    vim.health.info("WSL_DISTRO_NAME is not set; add it to WSLENV so it is passed from WSL2.")
+    return
   end
 
-  -- Zellij environment
+  -- ZELLIJ + ZELLIJ_SESSION_NAME (required)
   local zellij = vim.env.ZELLIJ
   local zellij_session = vim.env.ZELLIJ_SESSION_NAME
   if zellij and zellij_session then
     vim.health.ok(("Zellij session detected: ZELLIJ=%s, ZELLIJ_SESSION_NAME=%s"):format(zellij, zellij_session))
   else
     vim.health.info(
-      "Zellij session variables are not set; add ZELLIJ/ZELLIJ_SESSION_NAME to WSLENV so they are passed from WSL2."
+      "ZELLIJ/ZELLIJ_SESSION_NAME are not set; add them to WSLENV so they are passed from WSL2."
     )
     return
   end

@@ -4,21 +4,11 @@ local platform = require("smart-splits-wsl2.os")
 
 local M = {}
 
----Cache: whether this Windows nvim.exe was invoked from WSL2 (env propagated)
----@type boolean
-local INVOKED_FROM_WSL2 = platform.is_windows() and vim.env.WSL_DISTRO_NAME ~= ""
-
----Check whether this Windows nvim.exe was invoked from WSL2 (env propagated)
----@return boolean
-function M.invoked_from_wsl2()
-  return INVOKED_FROM_WSL2
-end
-
----Execute the given command in the WSL2 environment
+---Execute the given command in the WSL2 environment.
 ---@param cmd string[]
 ---@return vim.SystemCompleted
 function M.execute_in_wsl2(cmd)
-  if not M.invoked_from_wsl2() then
+  if not platform.is_windows() then
     return { code = 1, signal = 0, stdout = nil, stderr = nil }
   end
 
@@ -36,7 +26,7 @@ local RESOLVED_CMD_PATHS = {}
 ---@param cmd string
 ---@return string?
 function M.resolve_cmd_in_wsl2(cmd)
-  if (not M.invoked_from_wsl2()) or (type(cmd) ~= "string") or (cmd == "") then
+  if (not platform.is_windows()) or (type(cmd) ~= "string") or (cmd == "") then
     return nil
   end
 

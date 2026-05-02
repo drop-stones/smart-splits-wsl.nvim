@@ -23,13 +23,26 @@ local function ensure_zellij_path()
   assert(zellij_path, "zellij binary not found in WSL2")
 end
 
+---Build the base zellij command prefix with --session.
+---@return string[] prefix
+local function zellij_prefix()
+  ensure_zellij_path()
+  return { zellij_path, "--session", vim.env.ZELLIJ_SESSION_NAME }
+end
+
+---Build a shell-safe zellij command string for use in sh -c scripts.
+---@return string
+local function zellij_shell_prefix()
+  ensure_zellij_path()
+  return vim.fn.shellescape(zellij_path) .. " --session " .. vim.fn.shellescape(vim.env.ZELLIJ_SESSION_NAME)
+end
+
 ---Execute a zellij command in WSL2.
 ---@param cmd string[]
 ---@return string output, number exit_code
 local function zellij_exec(cmd)
-  ensure_zellij_path()
-  local command = vim.deepcopy(cmd)
-  table.insert(command, 1, zellij_path)
+  local command = zellij_prefix()
+  vim.list_extend(command, cmd)
   local result = wsl2.execute_in_wsl2(command)
   if result.code == 0 then
     return result.stdout or "", result.code
@@ -82,17 +95,17 @@ function M.next_pane(direction)
 
   -- Batch: snapshot → move → snapshot → compare, all in 1 wsl.exe call.
   -- Uses full zellij path so plain sh (no login shell) suffices.
-  local safe_path = vim.fn.shellescape(zellij_path)
+  local zj = zellij_shell_prefix()
   local script = string.format(
     "BEFORE=$(%s action list-clients 2>/dev/null); "
       .. "%s action %s %s 2>/dev/null; "
       .. "AFTER=$(%s action list-clients 2>/dev/null); "
       .. '[ "$BEFORE" != "$AFTER" ] && echo MOVED || echo SAME',
-    safe_path,
-    safe_path,
+    zj,
+    zj,
     action,
     direction,
-    safe_path
+    zj
   )
   local result = wsl2.execute_in_wsl2({ "sh", "-c", script })
 
