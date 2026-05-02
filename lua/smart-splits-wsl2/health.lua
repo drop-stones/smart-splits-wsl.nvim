@@ -1,4 +1,3 @@
-local mux = require("smart-splits-wsl2.mux")
 local platform = require("smart-splits-wsl2.os")
 local wsl2 = require("smart-splits-wsl2.wsl2")
 
@@ -53,38 +52,40 @@ local function check_environment()
     return
   end
 
-  -- WSL info (INFO only; this is primarily for visibility)
   local distro = vim.env.WSL_DISTRO_NAME
   if distro and #distro > 0 then
     vim.health.ok("WSL_DISTRO_NAME is set: " .. tostring(distro))
   else
-    -- In practice invoked_from_wsl2() implies WSL, but guard to avoid nil concatenation.
     vim.health.info("WSL_DISTRO_NAME is not set; if your environment sanitizes variables, consider exporting it.")
   end
 
-  -- Multiplexer detection (keep this lightweight; health is allowed to call it)
-  if not mux.available() then
-    vim.health.info("No supported multiplexer detected; integration will fall back to Neovim-only behavior.")
+  -- Zellij environment
+  local zellij = vim.env.ZELLIJ
+  local zellij_session = vim.env.ZELLIJ_SESSION_NAME
+  if zellij and zellij_session then
+    vim.health.ok(("Zellij session detected: ZELLIJ=%s, ZELLIJ_SESSION_NAME=%s"):format(tostring(zellij), tostring(zellij_session)))
+  else
+    vim.health.info(
+      "Zellij session variables are not set; Add ZELLIJ/ZELLIJ_SESSION_NAME to WSLENV so they are passed from WSL2."
+    )
     return
   end
 
-  local adapter = mux.get()
-  assert(adapter ~= nil, "Multiplexer adapter should not be nil at this point")
-  vim.health.ok("Detected multiplexer adapter: " .. tostring(adapter.name or "unknown"))
-
-  if adapter.name == "zellij" then
-    local zellij = vim.env.ZELLIJ
-    local zellij_session = vim.env.ZELLIJ_SESSION_NAME
-    if zellij and zellij_session then
-      vim.health.ok(("Zellij session detected: ZELLIJ=%s, ZELLIJ_SESSION_NAME=%s"):format(tostring(zellij), tostring(zellij_session)))
-    else
-      -- Keep it gentle: users may have launched nvim outside a zellij session.
-      vim.health.info(
-        "Zellij adapter in use but session variables are not set; Add ZELLIJ/ZELLIJ_SESSION_NAME to WSLENV so it's passed from WSL2."
-      )
-    end
+  -- Zellij binary resolution
+  local zellij_path = wsl2.resolve_cmd_in_wsl2("zellij")
+  if zellij_path then
+    vim.health.ok("Zellij binary resolved: " .. zellij_path)
   else
-    vim.health.warn("This plugin currently focuses on Zellij-specific environment checks; no support for: " .. tostring(adapter.name))
+    vim.health.error("Zellij binary not found in WSL2; ensure zellij is installed and available in the login shell PATH.")
+    return
+  end
+
+  -- Adapter injection status
+  local mux_api_ok, mux_api = pcall(require, "smart-splits.mux")
+  if mux_api_ok and mux_api.__mux and mux_api.__mux.type == "zellij" then
+    vim.health.ok("WSL2 Zellij adapter is injected into smart-splits.nvim")
+  else
+    vim.health.warn("WSL2 Zellij adapter is not yet injected; ensure setup() has been called.")
   end
 end
 
