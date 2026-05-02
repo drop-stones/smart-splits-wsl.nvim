@@ -3,10 +3,15 @@
 local interface = require("smart-splits-wsl2.mux.interface")
 local wsl2 = require("smart-splits-wsl2.wsl2")
 
+---Cache: resolved absolute path of the zellij binary in WSL2
+---@type string?
+local zellij_path = nil
+
 ---Send action to zellij in the WSL2 environment.
 ---@param action string[]
 local function zellij_action(action)
-  local zellij_cmd = { "zellij", "--session", vim.env.ZELLIJ_SESSION_NAME, "action" }
+  assert(zellij_path, "zellij path not resolved; call is_available() first")
+  local zellij_cmd = { zellij_path, "--session", vim.env.ZELLIJ_SESSION_NAME, "action" }
   vim.list_extend(zellij_cmd, action)
   wsl2.execute_in_wsl2(zellij_cmd)
 end
@@ -19,7 +24,11 @@ local ZellijAdapter = {
     return (vim.env.ZELLIJ ~= nil) and (vim.env.ZELLIJ_SESSION_NAME ~= nil)
   end,
   is_available = function()
-    return wsl2.invoked_from_wsl2() and wsl2.cmd_exists_in_wsl2("zellij")
+    if not wsl2.invoked_from_wsl2() then
+      return false
+    end
+    zellij_path = wsl2.resolve_cmd_in_wsl2("zellij")
+    return zellij_path ~= nil
   end,
   move_focus = function(direction)
     zellij_action({ "move-focus", direction })

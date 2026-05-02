@@ -27,32 +27,35 @@ function M.execute_in_wsl2(cmd)
   return vim.system(wsl2_cmd, { text = true }):wait()
 end
 
----Cache: whether the given command exists in the WSL2 environment
----@type table<string, boolean>
-local CMD_EXISTS_IN_WSL2 = {}
+---Cache: resolved absolute paths for commands in WSL2
+---@type table<string, string|false>
+local RESOLVED_CMD_PATHS = {}
 
----Check whether the given command exists in the WSL2 environment
+---Resolve the absolute path of a command in the WSL2 environment.
+---Returns the cached absolute path, or nil if the command is not found.
 ---@param cmd string
----@return boolean
-function M.cmd_exists_in_wsl2(cmd)
+---@return string?
+function M.resolve_cmd_in_wsl2(cmd)
   if (not M.invoked_from_wsl2()) or (type(cmd) ~= "string") or (cmd == "") then
-    return false
+    return nil
   end
 
-  -- cache check
-  local cached = CMD_EXISTS_IN_WSL2[cmd]
+  local cached = RESOLVED_CMD_PATHS[cmd]
   if cached ~= nil then
-    return cached
+    return cached or nil -- false → nil
   end
 
-  local shcmd = { "sh", "-lc", "command -v " .. vim.fn.shellescape(cmd) .. " >/dev/null 2>&1" }
+  local shcmd = { "sh", "-lc", "command -v " .. vim.fn.shellescape(cmd) }
   local result = M.execute_in_wsl2(shcmd)
-  local exist = (result.code == 0)
 
-  -- save to cache
-  CMD_EXISTS_IN_WSL2[cmd] = exist
+  if result.code == 0 and result.stdout and result.stdout ~= "" then
+    local path = vim.trim(result.stdout)
+    RESOLVED_CMD_PATHS[cmd] = path
+    return path
+  end
 
-  return exist
+  RESOLVED_CMD_PATHS[cmd] = false
+  return nil
 end
 
 return M
