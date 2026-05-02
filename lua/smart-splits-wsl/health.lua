@@ -43,7 +43,7 @@ local function check_environment()
   -- ZELLIJ + ZELLIJ_SESSION_NAME (required)
   local zellij = vim.env.ZELLIJ
   local zellij_session = vim.env.ZELLIJ_SESSION_NAME
-  if zellij and zellij_session then
+  if (zellij or "") ~= "" and (zellij_session or "") ~= "" then
     vim.health.ok(("Zellij session detected: ZELLIJ=%s, ZELLIJ_SESSION_NAME=%s"):format(zellij, zellij_session))
   else
     vim.health.info(

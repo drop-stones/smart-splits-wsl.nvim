@@ -17,9 +17,9 @@ function M.setup()
   -- Only activate on Windows nvim.exe launched from WSL2 with Zellij.
   if
     not platform.is_windows()
-    or not vim.env.WSL_DISTRO_NAME
-    or not vim.env.ZELLIJ
-    or not vim.env.ZELLIJ_SESSION_NAME
+    or (vim.env.WSL_DISTRO_NAME or "") == ""
+    or (vim.env.ZELLIJ or "") == ""
+    or (vim.env.ZELLIJ_SESSION_NAME or "") == ""
   then
     return
   end
